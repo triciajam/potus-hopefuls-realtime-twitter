@@ -3,6 +3,7 @@ from tweepy.streaming import StreamListener
 import sys, json, os, string, random, os, time
 from traceback import print_exc
 import pika
+import datetime
 
 # Added this to handle UTF-8 encoding
 reload(sys)  
@@ -49,6 +50,13 @@ print BASE_DIR
 
 bad_set = ''.join([a for a in string.punctuation if a!='#'])
 downsample_fracs = {}#change this if you only want a subset of the tweets. 
+
+connection = pika.BlockingConnection(pika.ConnectionParameters(
+        host='localhost'))
+channel = connection.channel()
+channel.exchange_declare(exchange='tweets',
+                         type='topic')
+#channel.queue_declare(queue='tweets')
 
 def removePuncExceptHashtag(s):
     """this removes the punctuation (except for hashtags) from a tweet s and turns it to lowercase so we can see which hashtags and words it includes"""
@@ -102,13 +110,16 @@ class listener(StreamListener):
     def on_data(self, data):
         try:
             d = json.loads(data)
-                        
+            e = {}
+            
             retweet = 'retweeted_status' in d
             if not retweet:
                 tweet_text = d['text'].encode('utf-8', 'ignore')
             else:
                 tweet_text = d['retweeted_status']['text'].encode('utf-8', 'ignore')
-                
+            
+            e['text'] = tweet_text
+                    
             hashtags = [a['text'] for a in d['entities']['hashtags']]
             tokenized_tweet = removePuncExceptHashtag(tweet_text)
             groups = getWhichGroupTweetBelongsTo(tokenized_tweet)
@@ -120,19 +131,35 @@ class listener(StreamListener):
                 d['tc_cat'] = cats[idx]
                 d['tc_text'] = group if cats[idx]=="hashtags" else ""
                 d['tc_date'] = time.strftime("%Y%m%d")
+                
+                
                 if group in downsample_fracs and random.random() > downsample_fracs[group]:#if we are down-sampling, only take some tweets. 
                     continue
-
-                if (self.n)%4000 == 0:#if we have dumped 4 thousand tweets, dump to a new outfile. 
-                    self.outfile_number = 2 if self.outfile_number==1 else 1
-                    print 'Writing to outfile', self.outfile_number
-                    self.outfile = open('%s/%s%i' % (outfileDirs[idx], outfileDirs[idx], self.outfile_number), 'wb')
+                
+                minute_key = datetime.datetime.now().strftime("%d%H%M%S")
+                group_key = group if len(groups) > 0 else 'none'
+                
+                e['group'] = group_key
+                e['time'] = minute_key
+                routing_key = '.'.join([minute_key, group_key])
+                print routing_key
+                message = json.dumps(e) 
+                channel.basic_publish(exchange='tweets',
+                      routing_key=routing_key,
+                      body=message)
+                #channel.basic_publish(exchange='',
+                #                    routing_key='tweets',
+                #                    body=json.dumps(data))
+                #if (self.n[idx])%1000 == 0:#if we have dumped a thousand tweets, dump to a new outfile. 
+                #    self.outfile_number[idx] += 1
+                #    print 'Writing to outfile', self.outfile_number[idx]
+                #    self.outfile[idx] = open('%s/%s%i' % (outfileDirs[idx], outfileDirs[idx], self.outfile_number[idx]), 'wb')
                 
                 if str(d['user']['geo_enabled']) != 'False':
-                    self.n_geolocated += 1
-                print 'For group', idx + 1, 'tweet', self.n, 'geolocated', self.n_geolocated, d['text'].encode('utf-8'), d['created_at']
-                self.outfile.write(json.dumps(d)+'\n')
-                self.n +=1
+                    self.n_geolocated[idx] += 1
+                print 'For group', idx + 1, 'tweet', self.n[idx], 'geolocated', self.n_geolocated[idx], d['text'].encode('utf-8'), d['created_at']
+                #self.outfile[idx].write(json.dumps(d)+'\n')
+                self.n[idx]+=1
         except:
             print_exc()
             print d
@@ -146,13 +173,13 @@ class listener(StreamListener):
     def on_error(self, status):
         print 'Error', status
     def __init__(self):
-        #self.n_streams = len(outfileDirs)
-        self.n = 0 #[0 for i in range(self.n_streams)]
-        self.outfile_number = 1 # [getMaxOutfileNumber(BASE_DIR + outfileName + '/', outfileName) for outfileName in outfileDirs]
-        print 'Max outfile numbers are', self.outfile_number, 'for', outfileDirs
-        self.n_geolocated = 0 # [0 for i in range(self.n_streams)]
-        self.outfile = None # [None for i in range(self.n_streams)]
-    
+        self.n_streams = len(outfileDirs)
+        self.n = [0 for i in range(self.n_streams)]
+        #self.outfile_number = [getMaxOutfileNumber(BASE_DIR + outfileName + '/', outfileName) for outfileName in outfileDirs]
+        #print 'Max outfile numbers are', self.outfile_number, 'for', outfileDirs
+        self.n_geolocated = [0 for i in range(self.n_streams)]
+        self.outfile = [None for i in range(self.n_streams)]
+     
 
 if __name__ == '__main__':
     #if len(sys.argv) < 5:
