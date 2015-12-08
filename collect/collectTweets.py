@@ -55,7 +55,13 @@ connection = pika.BlockingConnection(pika.ConnectionParameters(
         host='localhost'))
 channel = connection.channel()
 channel.exchange_declare(exchange='tweets',
-                         type='topic')
+                         type='fanout')
+result = channel.queue_declare(exclusive=True)
+channel.queue_bind(exchange='tweets',
+                   queue=result.method.queue)
+                   
+#channel.exchange_declare(exchange='tweets',
+#                         type='topic')
 #channel.queue_declare(queue='tweets')
 
 def removePuncExceptHashtag(s):
@@ -145,8 +151,11 @@ class listener(StreamListener):
                 print routing_key
                 message = json.dumps(e) 
                 channel.basic_publish(exchange='tweets',
-                      routing_key=routing_key,
+                      routing_key='',
                       body=message)
+                ##channel.basic_publish(exchange='tweets',
+                #      routing_key=routing_key,
+                #      body=message)
                 #channel.basic_publish(exchange='',
                 #                    routing_key='tweets',
                 #                    body=json.dumps(data))
