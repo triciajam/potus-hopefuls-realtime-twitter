@@ -1,9 +1,13 @@
 from flask import Flask, Response, render_template
+from flask.ext.socketio import SocketIO, emit
 import pika
 import json
 import pandas
 
- #setup queue
+# -----------------------------------------------------------------------------
+# TOPIC queue connection
+
+# setup topic queue
 connection = pika.BlockingConnection()
 channel = connection.channel()
 
@@ -16,8 +20,8 @@ for binding_key in binding_keys:
     channel.queue_bind(exchange='tweets',
                        queue=queue_name,
                        routing_key=binding_key)
-                         
-#function to get data from queue
+                       
+#function to block and get data from queue
 def get_tweets(size=40):
     tweets = []
     # Get ten messages and break out
@@ -42,12 +46,50 @@ def get_tweets(size=40):
     print '******** Requeued %i messages' % requeued_messages
     return json.dumps(tweets)
 
-app = Flask(__name__)
+# -----------------------------------------------------------------------------
+# FANOUT queue connection
 
+connection = pika.BlockingConnection(pika.ConnectionParameters(
+        host='localhost'))
+channel = connection.channel()
+
+channel.exchange_declare(exchange='tweets',
+                         type='fanout')
+result = channel.queue_declare(exclusive=True)
+queue_name = result.method.queue
+channel.queue_bind(exchange='tweets',
+                   queue=queue_name)
+print ' [*] Waiting for logs. To exit press CTRL+C'
+
+
+# -----------------------------------------------------------------------------
+# Flask IO Web Server
+
+app = Flask(__name__)
+app.config['SECRET_KEY'] = 'secret!'
 app.config.update(
     DEBUG=True,
     PROPAGATE_EXCEPTIONS=True
 )
+socketio = SocketIO(app)
+
+# -----------------------------------------------------------------------------
+# Emit When there's a new Tweet
+
+def callback(ch, method, properties, body):
+    print " [x] %r" % (body,)
+    socketio.emit('tweet', body)
+
+channel.basic_consume(callback,
+                      queue=queue_name,
+                      no_ack=True)
+channel.start_consuming()
+
+
+@socketio.on('connect')
+def test_connect():
+    emit('tweet', {'data': 'Connected' })
+
 
 @app.route("/")
 def index():
