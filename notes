@@ -1,0 +1,51 @@
+
+# Python machine learning
+http://nbviewer.ipython.org/github/gumption/Python_for_Data_Science/blob/master/Python_for_Data_Science_all.ipynb
+
+http://www.brettdangerfield.com/post/realtime_data_tag_cloud/
+https://www.rabbitmq.com/tutorials/tutorial-two-python.html
+http://www.danielforsyth.me/analyzing-a-nhl-playoff-game-with-twitter/
+# installing on EC2
+https://www.rabbitmq.com/ec2.html
+
+sudo pip install pika
+brew install rabbitmq
+/usr/local/sbin/rabbit-mqserver
+sudo pip install flask-socketio
+sudo pip install eventlet
+
+uniteblue
+gop
+rednationrising
+wethepeople
+hillaryforprison2016
+ohhillno
+stophillary2016
+refugees
+tcot
+
+https://www.reddit.com/r/Python/comments/24e9fb/realtime_twitter_word_cloud_using_python_rabbitmq/
+for _ in range(size):
+    method_frame, _, body = channel.consume('twitter_topic_feed')
+    tweets.append(json.loads(body))
+    channel.basic_ack(method_frame.delivery_tag)
+    
+WebStomp    
+http://www.rabbitmq.com/web-stomp.html    
+
+Flask.socket.io Example
+http://blog.miguelgrinberg.com/post/easy-websockets-with-flask-and-gevent
+http://stackoverflow.com/questions/30889688/query-sql-data-in-flask-to-use-for-charting-without-using-the-app-route-decorato
+http://www.fullstackpython.com/websockets.html
+Flask-RESTFUL
+http://stackoverflow.com/questions/23811299/loading-data-asynchronously-in-python-flask-for-d3-js?rq=1
+
+Solutions:
+use FANOUT queues!!!! - every queue gets same messages
+USe RabbitMQ STOMP from browser!!
+http://koo.fi/blog/2013/02/18/web-messaging-with-rabbitmq-web-stomp-and-sockjs/
+
+FLask-Socket-IO
+http://blog.miguelgrinberg.com/post/easy-websockets-with-flask-and-gevent
+https://desouradeep.wordpress.com/2014/12/20/realtiming-with-flask-socketio/
+
