@@ -36,9 +36,19 @@ var y = d3.scale.linear()
 <script type="text/javascript">
     
     var socket = io.connect('http://' + document.domain + ':' + location.port);
-    socket.on('tweet', function(msg) {  
-        $('#log').append('<p>Received: ' + msg.data + '</p>');
+    socket.on('connect', function(msg) {  
+        console.log("Connected to Server.");
     });
+    
+    socket.on('json', function(msg) {  
+        console.log("hi");
+        console.log(msg);
+        console.log(JSON.parse(msg));
+        var obj = JSON.parse(msg)
+        console.log(obj);
+        d3.select("#log").append("p").text('Received: ' + obj["text"]);
+    });
+    
 </script>
 </head>
 

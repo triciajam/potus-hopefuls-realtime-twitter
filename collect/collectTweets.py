@@ -150,9 +150,10 @@ class listener(StreamListener):
                 routing_key = '.'.join([minute_key, group_key])
                 print routing_key
                 message = json.dumps(e) 
-                channel.basic_publish(exchange='tweets',
-                      routing_key='',
-                      body=message)
+                if (group_key == "cruz"):
+                  channel.basic_publish(exchange='tweets',
+                        routing_key='',
+                        body=message)
                 ##channel.basic_publish(exchange='tweets',
                 #      routing_key=routing_key,
                 #      body=message)
@@ -188,6 +189,7 @@ class listener(StreamListener):
         #print 'Max outfile numbers are', self.outfile_number, 'for', outfileDirs
         self.n_geolocated = [0 for i in range(self.n_streams)]
         self.outfile = [None for i in range(self.n_streams)]
+        self.ntweet = 0
      
 
 if __name__ == '__main__':

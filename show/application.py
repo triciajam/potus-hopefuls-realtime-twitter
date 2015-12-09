@@ -3,10 +3,12 @@ from flask.ext.socketio import SocketIO, emit
 import pika
 import json
 import pandas
+import time
+from threading import Thread
 
 # -----------------------------------------------------------------------------
 # TOPIC queue connection
-
+'''
 # setup topic queue
 connection = pika.BlockingConnection()
 channel = connection.channel()
@@ -45,12 +47,23 @@ def get_tweets(size=40):
     requeued_messages = channel.cancel()
     print '******** Requeued %i messages' % requeued_messages
     return json.dumps(tweets)
+'''
+
+
+
+async_mode = 'eventlet'
+if async_mode == 'eventlet':
+    import eventlet
+    eventlet.monkey_patch()
+elif async_mode == 'gevent':
+    from gevent import monkey
+    monkey.patch_all()
+
 
 # -----------------------------------------------------------------------------
 # FANOUT queue connection
 
-connection = pika.BlockingConnection(pika.ConnectionParameters(
-        host='localhost'))
+connection = pika.BlockingConnection()
 channel = connection.channel()
 
 channel.exchange_declare(exchange='tweets',
@@ -59,42 +72,46 @@ result = channel.queue_declare(exclusive=True)
 queue_name = result.method.queue
 channel.queue_bind(exchange='tweets',
                    queue=queue_name)
-print ' [*] Waiting for logs. To exit press CTRL+C'
-
 
 # -----------------------------------------------------------------------------
 # Flask IO Web Server
 
 app = Flask(__name__)
 app.config['SECRET_KEY'] = 'secret!'
-app.config.update(
-    DEBUG=True,
-    PROPAGATE_EXCEPTIONS=True
-)
-socketio = SocketIO(app)
-
-# -----------------------------------------------------------------------------
-# Emit When there's a new Tweet
+socketio = SocketIO(app, async_mode=async_mode)
+print 'Created socketio app.'
+thread = None
 
 def callback(ch, method, properties, body):
     print " [x] %r" % (body,)
-    socketio.emit('tweet', body)
+    #print "hi"
+    socketio.emit('json', body)
+    time.sleep(.5)
 
-channel.basic_consume(callback,
+def queue_thread():
+    print 'RabbitMQ thread starting.....'
+    channel.basic_consume(callback,
                       queue=queue_name,
                       no_ack=True)
-channel.start_consuming()
-
-
-@socketio.on('connect')
-def test_connect():
-    emit('tweet', {'data': 'Connected' })
-
+    channel.start_consuming()
 
 @app.route("/")
 def index():
+    global thread
+    if thread is None:
+        thread = Thread(target=queue_thread)
+        thread.daemon = True
+        thread.start()
     return render_template("index.html")
 
+@socketio.on('connect')
+def test_connect():
+    print 'One connected'
+    emit('connect', {'text': 'Connected' })
+
+
+
+'''
 @app.route('/feed/raw_feed', methods=['GET'])
 def get_raw_tweets():
     tweets = get_tweets(size=40)
@@ -132,6 +149,10 @@ def get_word_count():
 
     response.headers.add('Access-Control-Allow-Origin', "*")
     return response
+'''
 
 if __name__ == "__main__":
-    app.run()
+    print 'Running...'
+    socketio.run(app, debug=True)
+    
+    
