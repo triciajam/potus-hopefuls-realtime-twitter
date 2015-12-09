@@ -35,18 +35,29 @@ var y = d3.scale.linear()
 <script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/1.3.7/socket.io.min.js"></script>
 <script type="text/javascript">
     
+    var queue = [];
+    
     var socket = io.connect('http://' + document.domain + ':' + location.port);
     socket.on('connect', function(msg) {  
         console.log("Connected to Server.");
     });
     
     socket.on('json', function(msg) {  
-        console.log("hi");
-        console.log(msg);
-        console.log(JSON.parse(msg));
+        //console.log("hi");
+        //console.log(msg);
+        //console.log(JSON.parse(msg));
         var obj = JSON.parse(msg)
-        console.log(obj);
-        d3.select("#log").append("p").text('Received: ' + obj["text"]);
+        //console.log(obj);
+        //n = queue.push(obj);
+        queue.push.apply(queue, obj);
+        console.log("**NEW**");
+        console.log(queue);
+        console.log("how many " + queue.length);
+        if (queue.length >= 300)
+          queue = queue.slice(queue.length - 300);
+        //console.log("There are" + n)  
+        //d3.select("#log").append("p").text('Received: ' + obj["text"]);
+        //d3.select("#log").text('Received: ' + queue.map(function(d) { return d.text + "\n" }));
     });
     
 </script>

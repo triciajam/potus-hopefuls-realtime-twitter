@@ -86,7 +86,7 @@ def callback(ch, method, properties, body):
     print " [x] %r" % (body,)
     #print "hi"
     socketio.emit('json', body)
-    time.sleep(.5)
+    time.sleep(.3)
 
 def queue_thread():
     print 'RabbitMQ thread starting.....'

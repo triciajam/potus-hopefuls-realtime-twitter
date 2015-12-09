@@ -149,11 +149,16 @@ class listener(StreamListener):
                 e['time'] = minute_key
                 routing_key = '.'.join([minute_key, group_key])
                 print routing_key
-                message = json.dumps(e) 
-                if (group_key == "cruz"):
+                #message = json.dumps(e) 
+                self.tweetsout.append(e)
+                #if (group_key == "cruz"):
+                if (len(self.tweetsout) == 50):
                   channel.basic_publish(exchange='tweets',
                         routing_key='',
-                        body=message)
+                        body=json.dumps(self.tweetsout))
+                  print "***", json.dumps(self.tweetsout)
+                  self.tweetsout = []  
+                    
                 ##channel.basic_publish(exchange='tweets',
                 #      routing_key=routing_key,
                 #      body=message)
@@ -167,7 +172,7 @@ class listener(StreamListener):
                 
                 if str(d['user']['geo_enabled']) != 'False':
                     self.n_geolocated[idx] += 1
-                print 'For group', idx + 1, 'tweet', self.n[idx], 'geolocated', self.n_geolocated[idx], d['text'].encode('utf-8'), d['created_at']
+                #print 'For group', idx + 1, 'tweet', self.n[idx], 'geolocated', self.n_geolocated[idx], d['text'].encode('utf-8'), d['created_at']
                 #self.outfile[idx].write(json.dumps(d)+'\n')
                 self.n[idx]+=1
         except:
@@ -189,7 +194,8 @@ class listener(StreamListener):
         #print 'Max outfile numbers are', self.outfile_number, 'for', outfileDirs
         self.n_geolocated = [0 for i in range(self.n_streams)]
         self.outfile = [None for i in range(self.n_streams)]
-        self.ntweet = 0
+        #self.ntweet = 0
+        self.tweetsout = []
      
 
 if __name__ == '__main__':
