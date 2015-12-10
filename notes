@@ -37,6 +37,8 @@ Flask.socket.io Example
 http://blog.miguelgrinberg.com/post/easy-websockets-with-flask-and-gevent
 http://stackoverflow.com/questions/30889688/query-sql-data-in-flask-to-use-for-charting-without-using-the-app-route-decorato
 http://www.fullstackpython.com/websockets.html
+https://desouradeep.wordpress.com/2014/12/20/realtiming-with-flask-socketio/
+
 Flask-RESTFUL
 http://stackoverflow.com/questions/23811299/loading-data-asynchronously-in-python-flask-for-d3-js?rq=1
 
