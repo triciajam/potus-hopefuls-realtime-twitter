@@ -5,12 +5,11 @@
 .bar {
   fill: steelblue;
 }
-
-.svg text {
-  fill: white;
-  font: 8px sans-serif;
-  text-anchor: middle;
+.label {
+  font: 10px sans-serif;
 }
+
+
 
 .bar:hover {
   fill: brown;
@@ -38,14 +37,15 @@
 <script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/d3/3.5.10/d3.js"></script>
 
 <body>
-  
+<div id="last1000"></div>  
+<div id="all"></div>  
 <script>
 
 var queue = [];
     
-var margin = {top: 20, right: 30, bottom: 30, left: 40},
-    width = 960 - margin.left - margin.right,
-    height = 500 - margin.top - margin.bottom;
+var margin = {top: 20, right: 20, bottom: 30, left: 40},
+    width = 600 - margin.left - margin.right,
+    height = 300 - margin.top - margin.bottom;
 
 var x = d3.scale.ordinal()
           .rangeRoundBands([0, width], .1);
@@ -57,8 +57,8 @@ var xAxis = d3.svg.axis()
 var yAxis = d3.svg.axis()
               .scale(y)
               .orient("left")
-              .ticks(5);
-var svg = d3.select("body").append("svg")
+              .ticks(10);
+var svg = d3.select("#last1000").append("svg")
               .attr("width", width + margin.left + margin.right)
               .attr("height", height + margin.top + margin.bottom)
             .append("g")
@@ -70,11 +70,12 @@ svg.append("g")
 svg.append("g")
       .attr("class", "y axis")
       .call(yAxis);
-console.log(svg);
+//console.log(svg);
 
 
 function update(flatdata) {
   console.log(flatdata)
+  
   data = d3.nest()
           .key(function(d) { return d.group; })
           .rollup(function(leaves) { return leaves.length; })
@@ -94,14 +95,11 @@ function update(flatdata) {
           
   // removed data:
   bar.exit().remove();
-
-
   // new data:
   bar.enter().append("rect")
      .attr("class", "bar")
      .attr("y", y(0))
      .attr("height", height - y(0));
-
   // updated data:
   bar
     .transition().duration(300)
@@ -109,7 +107,23 @@ function update(flatdata) {
       .attr("width", x.rangeBand()) // constant, so no callback function(d) here
       .attr("y", function(d) { return y(d.values); })
       .attr("height", function(d) { return height - y(d.values); });
-    
+
+      
+  var labels = svg.selectAll(".label")
+     .data(data, function(d) { return d.key; });
+
+  labels.exit().remove();
+  labels.enter().append("text")
+     .attr("class", "label")
+     .attr("text-anchor", "middle")
+     .attr("y", y(0))
+     .attr("x", x(0));
+     
+  labels.transition().duration(300)
+     .attr("dy", ".35em")
+     .text(function(d) { return d.values;})
+     .attr("x", function(d) { return x(d.key) + x.rangeBand()/2; })
+     .attr("y", function(d) { return y(d.values) - 6; });
 
 }
 
