@@ -41,7 +41,13 @@
 <div id="all"></div>  
 <script>
 
-var queue = [];
+
+var processing_queue = [];
+var latest_queue = [];
+
+var latest_queue_totals = [];
+var all_totals = [];
+
     
 var margin = {top: 20, right: 20, bottom: 30, left: 40},
     width = 600 - margin.left - margin.right,
@@ -73,25 +79,29 @@ svg.append("g")
 //console.log(svg);
 
 
-function update(flatdata) {
-  console.log(flatdata)
+function update(currentdata) {
   
-  data = d3.nest()
+  /*currentdata = d3.nest()
           .key(function(d) { return d.group; })
           .rollup(function(leaves) { return leaves.length; })
           .entries(flatdata)
           .sort(function(a, b){ return d3.descending(a.values, b.values); });
-  
-  console.log(data);
-  
-  x.domain(data.map(function(d) { return d.key; }));
-  y.domain([0, d3.max(data, function(d) { return d.values; })]);
+  runningdata.push.apply(runningdata, currentdata);
+  runningdata = d3.nest()
+          .key(function(d) { return d.key; })
+          .rollup(function(leaves) { return d3.sum(leaves, function(d) {return d.values;}) } )
+          .entries(runningdata)
+          .sort(function(a, b){ return d3.descending(a.values, b.values); });
+  */
+
+  x.domain(currentdata.map(function(d) { return d.key; }));
+  y.domain([0, d3.max(currentdata, function(d) { return d.values; })]);
   
   svg.select(".x.axis").transition().duration(300).call(xAxis);
   svg.select(".y.axis").transition().duration(300).call(yAxis);
   
   var bar = svg.selectAll(".bar")
-          .data(data, function(d) { return d.key; });
+          .data(currentdata, function(d) { return d.key; });
           
   // removed data:
   bar.exit().remove();
@@ -110,7 +120,7 @@ function update(flatdata) {
 
       
   var labels = svg.selectAll(".label")
-     .data(data, function(d) { return d.key; });
+     .data(currentdata, function(d) { return d.key; });
 
   labels.exit().remove();
   labels.enter().append("text")
@@ -133,6 +143,56 @@ function update(flatdata) {
 //});
 </script>
 <script type="text/javascript">
+
+    function processNew() {
+        console.log("***** Processing new data");      
+        latest_queue.push.apply(latest_queue, processing_queue);
+        
+        temp_processing_totals = d3.nest()
+          .key(function(d) { return d.group; })
+          .rollup(function(leaves) { return leaves.length } )
+          .entries(processing_queue);
+        console.log("temp_processing_totals" + temp_processing_totals.length)
+        console.log(temp_processing_totals)
+        
+        processing_queue = [];
+        
+        if (latest_queue.length >= 1000)
+          latest_queue = latest_queue.slice(latest_queue.length - 1000);
+          
+        latest_queue_totals = d3.nest()
+          .key(function(d) { return d.group; })
+          .rollup(function(leaves) { return leaves.length; })
+          .entries(latest_queue)
+          .sort(function(a, b){ return d3.descending(a.values, b.values); });
+
+        
+        all_totals.push.apply(all_totals, temp_processing_totals);
+        all_totals = d3.nest()
+          .key(function(d) { return d.key; })
+          .rollup(function(leaves) { return d3.sum(leaves, function(d) {return d.values;}) } )
+          .entries(all_totals)
+          .sort(function(a, b){ return d3.descending(a.values, b.values); });
+          
+          console.log("processing_queue " + processing_queue.length)
+          console.log(processing_queue)
+          console.log("latest_queue " + latest_queue.length)
+          console.log(latest_queue)
+          console.log("latest_queue_totals" + latest_queue_totals.length)
+          console.log(latest_queue_totals)
+          console.log("all_totals" + all_totals.length)
+          console.log(all_totals)
+  
+      
+    }
+    
+    setInterval(function() {
+        console.log("** Updating UI");
+        processNew();
+        update(latest_queue_totals);
+        
+    }, 3000)
+
  
     var socket = io.connect('http://' + document.domain + ':' + location.port);
     socket.on('connect', function(msg) {  
@@ -143,21 +203,56 @@ function update(flatdata) {
         //console.log("hi");
         //console.log(msg);
         //console.log(JSON.parse(msg));
-        var obj = JSON.parse(msg)
+        
+        
+        
+        var newTweets = JSON.parse(msg)
+        processing_queue.push.apply(processing_queue, newTweets);
+        console.log("** Got New Tweets " + processing_queue.length);
+        /*
+        new_totals = d3.nest()
+          .key(function(d) { return d.group; })
+          .rollup(function(leaves) { return leaves.length } )
+          .entries(newTweets);
+        all_totals.push.apply(all_totals, new_totals);
+        all_totals = d3.nest()
+          .key(function(d) { return d.key; })
+          .rollup(function(leaves) { return d3.sum(leaves, function(d) {return d.values;}) } )
+          .entries(all_totals)
+          .sort(function(a, b){ return d3.descending(a.values, b.values); });
+        
         //console.log(obj);
         //n = queue.push(obj);
-        queue.push.apply(queue, obj);
-        console.log("**NEW**");
-        console.log(queue);
-        console.log("how many " + queue.length);
+        queue.push.apply(queue, newTweets);
+        //console.log("**NEW**");
+        //console.log(queue);
         if (queue.length >= 1000)
           queue = queue.slice(queue.length - 1000);
+          
+        queue_totals = d3.nest()
+          .key(function(d) { return d.group; })
+          .rollup(function(leaves) { return leaves.length; })
+          .entries(queue)
+          .sort(function(a, b){ return d3.descending(a.values, b.values); });
+        
+          console.log("queue")
+          console.log(queue)
+          console.log("queue_totals")
+          console.log(queue_totals)
+          console.log("all_totals")
+          console.log(all_totals)
+
+          
         //console.log("There are" + n)  
         //d3.select("#log").append("p").text('Received: ' + obj["text"]);
         //d3.select("#log").text('Received: ' + queue.map(function(d) { return d.text + "\n" }));
-        update(queue);
+        update(queue_totals,all);
+        */
     });
-    
+
+
+
+
 </script>
 
 
